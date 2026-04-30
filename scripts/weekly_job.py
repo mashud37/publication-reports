@@ -6,10 +6,7 @@ from ranker import rank
 from emailer import send_weekly_email
 
 CSV_PATH = os.environ.get("CSV_PATH", "info/journal-info-comb.csv")
-HISTORICAL_CSV = os.environ.get(
-    "HISTORICAL_CSV",
-    "model/data/asreview_dataset_all_Weekly Reports Label.csv"
-)
+HISTORICAL_CSV = os.environ.get("HISTORICAL_CSV", "model/data/asreview_labels.csv")
 
 
 def week_dates():

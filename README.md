@@ -17,8 +17,8 @@ Every Monday it fetches new publications from a list of journals you care about,
 
 ## What you need
 
-- A computer running Linux (this guide uses a cheap cloud server on AWS — see below)
-- A Gmail account for sending emails
+- A cloud server on AWS (this guide walks you through it — no prior experience needed)
+- An email account for sending notifications — either a personal Gmail address or a free Brevo account (see the Configuration section)
 - About 30–45 minutes for the initial setup
 
 You do not need programming experience. You will type some commands into a terminal, but each step below explains what you are doing and why.
@@ -42,6 +42,16 @@ The service needs to run somewhere that is always on and reachable by email link
 
 After a minute or two, your server will be running. Find its **Public IPv4 address** on the EC2 dashboard — you will need this.
 
+### Open port 5000
+
+The service runs on port 5000. You need to tell AWS to allow traffic through that port, otherwise your browser will not be able to reach the web interface.
+
+1. In the EC2 dashboard, click **Security Groups** in the left menu.
+2. Click the security group attached to your instance (it will be named something like *launch-wizard-1*).
+3. Click the **Inbound rules** tab, then **Edit inbound rules**.
+4. Click **Add rule**. Set the type to **Custom TCP**, the port to **5000**, and the source to **Anywhere-IPv4**.
+5. Click **Save rules**.
+
 ### Connect to your server
 
 On a Mac or Linux machine, open Terminal. On Windows, open PowerShell.
@@ -63,29 +73,40 @@ Run these commands one at a time. Each line downloads or installs something the 
 
 ```bash
 sudo apt update
-sudo apt install -y python3-pip git
+sudo apt install -y python3-pip git nano
+pip3 install -r requirements.txt --break-system-packages
 ```
+
+> The `--break-system-packages` flag is needed on newer versions of Ubuntu. It is safe to use here — it simply allows installing Python packages globally on the server.
 
 Download this project onto your server:
 
 ```bash
 git clone https://github.com/YOUR-USERNAME/publication-reports.git
 cd publication-reports
-pip3 install -r requirements.txt
+pip3 install -r requirements.txt --break-system-packages
 ```
 
 ---
 
 ## Configuration
 
-All settings live in a single file called `.env`. Start by copying the template:
+All settings live in a single file called `.env`. Make sure you are inside the project folder first:
+
+```bash
+cd ~/publication-reports
+```
+
+Then copy the template and open it for editing:
 
 ```bash
 cp .env.example .env
 nano .env
 ```
 
-This opens a simple text editor. You will fill in the values below. Use the arrow keys to move around, and `Ctrl+X` then `Y` then `Enter` to save and exit.
+This opens a simple text editor. Use the arrow keys to move around. When you are done, press `Ctrl+X`, then `Y`, then `Enter` to save and exit.
+
+The file contains lines starting with `#` — those are comments explaining each setting and are ignored by the programme. You only need to fill in the values on the lines that do not start with `#`.
 
 ### Email settings
 
@@ -196,14 +217,20 @@ These values never need to change unless you suspect your email account has been
 
 ## First run
 
-This command starts everything for the first time. It sets up the database, loads the historical training data, fetches this week's articles from CrossRef, and sends you the first notification email.
+Make sure you are inside the project folder:
 
 ```bash
-export $(cat .env | xargs)
+cd ~/publication-reports
+```
+
+Then load your settings and start the job:
+
+```bash
+set -a && source .env && set +a
 python3 scripts/weekly_job.py
 ```
 
-The `export` line reads your `.env` file and makes all the settings available to the programme. You will need to run it every time you open a fresh terminal session on the server.
+The `set -a && source .env && set +a` line reads your `.env` file and makes all the settings available to the programme. You will need to run it every time you open a fresh terminal session on the server — it does not persist between sessions.
 
 If everything works, you should receive an email within a few minutes.
 
@@ -211,20 +238,23 @@ If everything works, you should receive an email within a few minutes.
 
 ## Starting the web interface
 
-The web interface needs to run continuously in the background so you can access it when you click the link in your email. Start it like this:
+The web interface needs to run continuously in the background so you can access it when you click the link in your email. Make sure you are inside the project folder and your settings are loaded:
 
 ```bash
-export $(cat .env | xargs)
+cd ~/publication-reports
+set -a && source .env && set +a
 nohup python3 scripts/app.py &
 ```
 
-`nohup` means "do not stop when I close this terminal window". The `&` runs it in the background. You can now close your terminal and the service will keep running.
+`nohup` means "do not stop when I close this terminal window". The `&` runs it in the background. You may see a message saying `nohup: ignoring input and appending output to 'nohup.out'` — this is normal. You can now close your terminal and the service will keep running.
 
 To check it is running:
 
 ```bash
-ps aux | grep app.py
+pgrep -f app.py
 ```
+
+If it prints a number, the service is running. If it prints nothing, it is not.
 
 To stop it:
 
@@ -232,7 +262,7 @@ To stop it:
 pkill -f app.py
 ```
 
-> **Note:** If your server restarts (for example after an AWS maintenance event), you will need to start the web interface again by reconnecting via SSH and running the two commands above. For a fully automated setup where it restarts itself, look into Linux `systemd` services — but that is optional.
+> **Note:** If your server restarts (for example after an AWS maintenance event), you will need to start the web interface again by reconnecting via SSH and running the three commands above. For a fully automated setup where it restarts itself, look into Linux `systemd` services — but that is optional.
 
 ---
 
@@ -251,7 +281,7 @@ If it asks which editor to use, choose `nano` (usually option 1).
 Add this line at the bottom of the file:
 
 ```
-0 8 * * 1 cd /home/ubuntu/publication-reports && export $(cat .env | xargs) && python3 scripts/weekly_job.py >> /home/ubuntu/weekly_job.log 2>&1
+0 8 * * 1 cd /home/ubuntu/publication-reports && set -a && source .env && set +a && python3 scripts/weekly_job.py >> /home/ubuntu/weekly_job.log 2>&1
 ```
 
 Save and exit (`Ctrl+X`, `Y`, `Enter`).
