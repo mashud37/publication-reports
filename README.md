@@ -73,7 +73,9 @@ Run these commands one at a time. Each line downloads or installs something the 
 
 ```bash
 sudo apt update
-sudo apt install -y python3-pip git nano
+sudo apt install -y python3-pip git nano cron
+sudo systemctl enable cron
+sudo systemctl start cron
 pip3 install -r requirements.txt --break-system-packages
 ```
 
