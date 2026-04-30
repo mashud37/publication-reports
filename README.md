@@ -87,16 +87,29 @@ nano .env
 
 This opens a simple text editor. You will fill in the values below. Use the arrow keys to move around, and `Ctrl+X` then `Y` then `Enter` to save and exit.
 
-### Email settings (Gmail)
+### Email settings
 
-The service sends emails using your Gmail account. For security reasons, you should not use your regular Gmail password here. Instead, Gmail lets you create a special **App Password** — a separate password just for this application.
+The service needs an email account to send from. There are two options depending on your situation.
 
-To get one:
-1. Go to your Google Account → **Security**.
-2. Make sure **2-Step Verification** is turned on (it must be enabled first).
-3. Search for **App Passwords** in the Security page.
-4. Create a new App Password, name it anything (e.g. *pub-reports*).
-5. Google will show you a 16-character password. Copy it.
+---
+
+**Option A — Gmail (personal @gmail.com account only)**
+
+Gmail allows you to create a special **App Password** — a separate 16-character password just for this application, so you never expose your main account password. This works only with a personal Gmail address, not with a Google Workspace account provided by a university or employer.
+
+Step 1 — enable 2-Step Verification if you haven't already. App Passwords do not appear anywhere in Google's settings until this is turned on.
+
+- Go to [myaccount.google.com](https://myaccount.google.com)
+- Click **Security** in the left menu
+- Under the section **How you sign in to Google**, click **2-Step Verification** and follow the steps to turn it on
+
+Step 2 — create the App Password.
+
+- Go back to [myaccount.google.com/security](https://myaccount.google.com/security)
+- In the search bar at the top of that page, type **App Passwords** — this is the most reliable way to find it as Google moves it around
+- Click the **App Passwords** result
+- You will see a text box asking for a name — type anything, e.g. *pub-reports*, and click **Create**
+- Google shows you a 16-character password in a box. Copy it now — it will not be shown again.
 
 In your `.env` file:
 
@@ -108,7 +121,29 @@ SMTP_PASS=the-16-character-app-password
 EMAIL_TO=the-address-where-you-want-to-receive-emails
 ```
 
-`EMAIL_TO` is where the weekly digest and selection emails will land. It can be the same Gmail address or any other email you prefer.
+---
+
+**Option B — Brevo (recommended if Gmail doesn't work)**
+
+Brevo is a free email sending service that is simpler to set up than Gmail and has no restrictions on account type. The free tier allows 300 emails per day, which is far more than this service ever needs.
+
+- Go to [brevo.com](https://www.brevo.com) and create a free account
+- Once logged in, go to your account menu (top right) → **SMTP & API**
+- You will see an SMTP server address, port, login, and password already generated for you — copy these
+
+In your `.env` file:
+
+```
+SMTP_HOST=smtp-relay.brevo.com
+SMTP_PORT=587
+SMTP_USER=your-brevo-login
+SMTP_PASS=your-brevo-smtp-password
+EMAIL_TO=the-address-where-you-want-to-receive-emails
+```
+
+---
+
+`EMAIL_TO` is where the weekly digest and selection emails will land. It can be any email address you prefer.
 
 ### The web address
 
