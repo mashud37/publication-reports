@@ -4,8 +4,13 @@ from datetime import datetime, timedelta
 from flask import (
     Flask, render_template_string, request, redirect, url_for, session, abort
 )
-from db import get_week_articles, save_session, session_done, get_session_selections, init_db
+from db import get_week_articles, save_session, session_done, get_session_selections, init_db, load_historical
 from ranker import rank
+
+init_db()
+_HISTORICAL_CSV = os.environ.get("HISTORICAL_CSV", "model/data/asreview_labels.csv")
+if os.path.exists(_HISTORICAL_CSV):
+    load_historical(_HISTORICAL_CSV)
 
 app = Flask(__name__)
 app.secret_key = os.environ["SECRET_KEY"]
@@ -13,11 +18,12 @@ app.config["SESSION_COOKIE_SECURE"] = os.environ.get("HTTPS", "false").lower() =
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 ACCESS_TOKEN = os.environ["ACCESS_TOKEN"]
+WEEKLY_JOB_TOKEN = os.environ["WEEKLY_JOB_TOKEN"]
 
 TEMPLATE = """<!DOCTYPE html>
 <html><head>
 <meta charset="utf-8">
-<title>Publications — {{ date }}</title>
+<title>Publications &mdash; {{ date }}</title>
 <style>
 * { box-sizing: border-box; }
 body { font-family: sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1.5rem; color: #111; }
@@ -40,7 +46,7 @@ button:hover { background: #1d4ed8; }
 </style>
 </head>
 <body>
-<h1>Publications — {{ date }}</h1>
+<h1>Publications &mdash; {{ date }}</h1>
 <p class="subtitle">
   {{ ranked|length }} publications
   {%- if ranked and ranked[0][1] is not none %} &mdash; ranked by predicted relevance{% endif %}
@@ -68,7 +74,7 @@ button:hover { background: #1d4ed8; }
     </div>
     {% if article.abstract %}
     <div class="abstract">
-      {{ article.abstract[:400] }}{% if article.abstract|length > 400 %}…{% endif %}
+      {{ article.abstract[:400] }}{% if article.abstract|length > 400 %}&hellip;{% endif %}
     </div>
     {% endif %}
   </div>
@@ -89,7 +95,7 @@ button:hover { background: #1d4ed8; }
 
 @app.before_request
 def require_auth():
-    if request.endpoint in ("static",):
+    if request.endpoint in ("static", "run_weekly", "healthz"):
         return
     if session.get("authed"):
         return
@@ -99,6 +105,11 @@ def require_auth():
         session["csrf_token"] = secrets.token_hex(16)
         return
     abort(401)
+
+
+@app.route("/healthz")
+def healthz():
+    return "ok", 200
 
 
 @app.route("/")
@@ -146,7 +157,20 @@ def select(date):
     return redirect(url_for("week", date=date))
 
 
+@app.route("/internal/run-weekly", methods=["POST", "GET"])
+def run_weekly():
+    token = request.args.get("token", "")
+    if not secrets.compare_digest(token, WEEKLY_JOB_TOKEN):
+        abort(401)
+    from weekly_job import run
+    try:
+        run()
+    except Exception as e:
+        print(f"Weekly job failed: {e}")
+        return f"error: {e}", 500
+    return "ok", 200
+
+
 if __name__ == "__main__":
-    init_db()
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
