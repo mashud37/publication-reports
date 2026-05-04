@@ -213,7 +213,7 @@ Replace `pub-reports-yourname-data` with the exact bucket name from Step 4, then
 ```bash
 gcloud run deploy pub-reports \
   --source . \
-  --region us-central1 \
+  --region europe-west1 \
   --allow-unauthenticated \
   --memory 512Mi \
   --cpu 1 \

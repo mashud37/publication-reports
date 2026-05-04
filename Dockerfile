@@ -11,4 +11,4 @@ RUN pip install --no-cache-dir -r requirements.txt gunicorn
 
 COPY . .
 
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 4 --timeout 600 --chdir /app/scripts app:app
+CMD exec gunicorn --bind :$PORT --workers 1 --threads 4 --timeout 600 --pythonpath /app/scripts app:app

@@ -12,8 +12,8 @@ HISTORICAL_CSV = os.environ.get("HISTORICAL_CSV", "model/data/asreview_labels.cs
 def week_dates():
     today = datetime.now()
     monday = today - timedelta(days=today.weekday())
-    sunday = monday + timedelta(days=6)
-    return monday.strftime("%Y-%m-%d"), sunday.strftime("%Y-%m-%d")
+    last_monday = monday - timedelta(days=7)
+    return monday.strftime("%Y-%m-%d"), last_monday.strftime("%Y-%m-%d"), monday.strftime("%Y-%m-%d")
 
 
 def run():
@@ -22,17 +22,19 @@ def run():
     if os.path.exists(HISTORICAL_CSV):
         load_historical(HISTORICAL_CSV)
 
-    filter_from, filter_to = week_dates()
+    week_label, fetch_from, fetch_to = week_dates()
 
-    if not get_week_articles(filter_from):
-        print(f"Fetching {filter_from} → {filter_to}")
-        articles = fetch_articles(CSV_PATH, filter_from, filter_to)
+    if not get_week_articles(week_label):
+        print(f"Fetching {fetch_from} → {fetch_to}")
+        articles = fetch_articles(CSV_PATH, fetch_from, fetch_to)
+        for a in articles:
+            a["week_date"] = week_label
         save_articles(articles)
         print(f"Saved {len(articles)} articles")
 
-    articles = get_week_articles(filter_from)
+    articles = get_week_articles(week_label)
     ranked = rank(articles)
-    send_weekly_email(filter_from, ranked, access_token=os.environ["ACCESS_TOKEN"])
+    send_weekly_email(week_label, ranked, access_token=os.environ["ACCESS_TOKEN"])
 
 
 if __name__ == "__main__":

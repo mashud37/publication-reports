@@ -74,7 +74,7 @@ button:hover { background: #1d4ed8; }
     </div>
     {% if article.abstract %}
     <div class="abstract">
-      {{ article.abstract[:400] }}{% if article.abstract|length > 400 %}&hellip;{% endif %}
+      {{ article.abstract }}
     </div>
     {% endif %}
   </div>
