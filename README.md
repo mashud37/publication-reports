@@ -97,15 +97,15 @@ This may take a minute.
 
 ## Step 4 — Create a storage bucket for the database
 
-Bucket names must be unique across all of Google Cloud, so include something personal in the name. Replace `yourname` below with your name or initials:
+The bucket name uses your GCP project ID as a prefix to keep it unique. Replace `YOUR_PROJECT` below with your project ID:
 
 ```bash
-gcloud storage buckets create gs://pub-reports-yourname-data --location=us-central1
+gcloud storage buckets create gs://YOUR_PROJECT-pubrep-data --location=europe-west1 --labels=app=pub-reports
 ```
 
-If the name is taken, try a different suffix. Write down the exact name — you will need it in Step 7.
+Write down the exact name — you will need it in Step 7.
 
-> **Region:** `us-central1` is one of the cheapest. If you live in Europe, use `europe-west1` instead and use the same region throughout this guide.
+> **Region:** `europe-west1` is used throughout this guide. Change it consistently if you prefer a different region.
 
 ---
 
@@ -208,10 +208,10 @@ The first deployment takes about 5 minutes; later ones are faster.
 
 Make sure you are in the project folder (`cd publication-reports`).
 
-Replace `pub-reports-yourname-data` with the exact bucket name from Step 4, then run:
+Replace `YOUR_PROJECT-pubrep-data` with the exact bucket name from Step 4, then run:
 
 ```bash
-gcloud run deploy pub-reports \
+gcloud run deploy pubrep \
   --source . \
   --region europe-west1 \
   --allow-unauthenticated \
@@ -220,19 +220,21 @@ gcloud run deploy pub-reports \
   --max-instances 1 \
   --concurrency 1 \
   --timeout 600 \
-  --add-volume name=data,type=cloud-storage,bucket=pub-reports-yourname-data \
+  --add-volume name=data,type=cloud-storage,bucket=YOUR_PROJECT-pubrep-data \
   --add-volume-mount volume=data,mount-path=/mnt/data \
-  --env-vars-file env.yaml
+  --env-vars-file env.yaml \
+  --labels app=pub-reports
 ```
 
 > **Windows PowerShell:** replace each `\` with a backtick `` ` ``, or put the whole command on one line with no backslashes.
+> **Shortcut:** `deploy.sh` in this directory automates Steps 4–8 in one shot — see the script header for usage.
 
 Type `Y` to confirm any prompts.
 
 When it finishes you will see:
 
 ```
-Service URL: https://pub-reports-abc123-uc.a.run.app
+Service URL: https://pubrep-abc123-ew.a.run.app
 ```
 
 **Copy that URL.** Open `env.yaml` and paste it as the value of `BASE_URL` (keep the double quotes). Save.
@@ -251,17 +253,17 @@ You need:
 Replace the two `PASTE_...` placeholders below and run:
 
 ```bash
-gcloud scheduler jobs create http weekly-pub-reports \
-  --location=us-central1 \
+gcloud scheduler jobs create http pubrep-weekly-sched \
+  --location=europe-west1 \
   --schedule="0 8 * * 1" \
   --uri="PASTE_YOUR_SERVICE_URL/internal/run-weekly?token=PASTE_YOUR_WEEKLY_JOB_TOKEN" \
   --http-method=POST \
-  --time-zone="Europe/Brussels" \
+  --time-zone="Europe/Berlin" \
   --attempt-deadline=600s
 ```
 
 - `0 8 * * 1` means *every Monday at 08:00*. Change the first two numbers (`minute hour`) for a different time.
-- Change `Europe/Brussels` to your time zone if needed: `America/New_York`, `America/Los_Angeles`, `Europe/London`, `Asia/Tokyo`, `Australia/Sydney`. Full list at [en.wikipedia.org/wiki/List_of_tz_database_time_zones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).
+- Change `Europe/Berlin` to your time zone if needed: `America/New_York`, `America/Los_Angeles`, `Europe/London`, `Asia/Tokyo`, `Australia/Sydney`. Full list at [en.wikipedia.org/wiki/List_of_tz_database_time_zones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).
 
 ---
 
@@ -270,7 +272,7 @@ gcloud scheduler jobs create http weekly-pub-reports \
 Trigger the job manually:
 
 ```bash
-gcloud scheduler jobs run weekly-pub-reports --location=us-central1
+gcloud scheduler jobs run pubrep-weekly-sched --location=europe-west1
 ```
 
 Within a couple of minutes you should receive an email titled "Publications — Week of …". Click the link, tick a few articles, click **Save Selections**, and a follow-up email should arrive with your selections.
@@ -346,7 +348,7 @@ After any code or settings change, run the deploy command from Step 7 again. Clo
 Check the live logs:
 
 ```bash
-gcloud run services logs tail pub-reports --region us-central1
+gcloud run services logs tail pubrep --region europe-west1
 ```
 
 Click the link again and watch what appears.
@@ -356,8 +358,8 @@ Click the link again and watch what appears.
 Run the job manually and watch the logs:
 
 ```bash
-gcloud scheduler jobs run weekly-pub-reports --location=us-central1
-gcloud run services logs tail pub-reports --region us-central1
+gcloud scheduler jobs run pubrep-weekly-sched --location=europe-west1
+gcloud run services logs tail pubrep --region europe-west1
 ```
 
 The most common cause is incorrect SMTP credentials in `env.yaml`. Make sure `SMTP_PASS` is the 16-character App Password with no spaces, and that `SMTP_USER` is a personal `@gmail.com` address.
@@ -367,7 +369,7 @@ The most common cause is incorrect SMTP credentials in `env.yaml`. Make sure `SM
 Download it:
 
 ```bash
-gcloud storage cp gs://pub-reports-yourname-data/publications.db ./publications.db
+gcloud storage cp gs://YOUR_PROJECT-pubrep-data/publications.db ./publications.db
 ```
 
 Open with [DB Browser for SQLite](https://sqlitebrowser.org/) (free).
@@ -375,9 +377,9 @@ Open with [DB Browser for SQLite](https://sqlitebrowser.org/) (free).
 ### I want to delete everything and start over
 
 ```bash
-gcloud run services delete pub-reports --region us-central1
-gcloud scheduler jobs delete weekly-pub-reports --location=us-central1
-gcloud storage rm -r gs://pub-reports-yourname-data
+gcloud run services delete pubrep --region europe-west1
+gcloud scheduler jobs delete pubrep-weekly-sched --location=europe-west1
+gcloud storage rm -r gs://YOUR_PROJECT-pubrep-data
 ```
 
 You can then redo the setup from Step 4.

@@ -1,5 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Secrets — never commit. Production secrets live in env.yaml mounted at
+# deploy time; env.yaml.example is the committed template.
 .env
 env.yaml
-__pycache__/
-*.pyc
-data/publications.db
+*.token.json
+credentials.json
+
+# Local database (publications.db lives on GCS in production).
+data/
+*.db
+
+# Jupyter (occasional local exploration)
+*.ipynb
+.ipynb_checkpoints/

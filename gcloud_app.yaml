@@ -1,0 +1,55 @@
+# Standardized deployment manifest — see ../GCLOUD_POLICY.md
+# Source of truth for `python ../manage.py`. deploy.sh is the standalone fallback.
+app: pub-reports
+prefix: pubrep
+region: europe-west1
+type: service
+
+artifact_registry:
+  repo: pubrep
+  image: pubrep/app:latest
+
+service_account:
+  name: pubrep-sa
+  display: "Pub Reports — Cloud Scheduler invoker"
+  roles: [roles/run.invoker]
+
+buckets:
+  - role: data
+    suffix: pubrep-data
+    volume_mount: /mnt/data
+
+env_file: env.yaml
+base_url_var: BASE_URL
+
+# Filled from ../user_config.yaml at install (only when missing/placeholder).
+env_from_shared:
+  SMTP_HOST: smtp_host
+  SMTP_PORT: smtp_port
+  SMTP_USER: smtp_user
+  SMTP_PASS: smtp_pass
+  EMAIL_TO: email_to
+# Auto-generated with secrets.token_hex(32) if missing/placeholder.
+env_generated:
+  - SECRET_KEY
+  - ACCESS_TOKEN
+  - WEEKLY_JOB_TOKEN
+
+service:
+  name: pubrep
+  allow_unauthenticated: true
+  memory: 512Mi
+  cpu: 1
+  max_instances: 1
+  concurrency: 1
+  timeout: 600
+
+schedulers:
+  - name: pubrep-weekly-sched
+    schedule: "0 8 * * 1"
+    time_zone: Europe/Berlin
+    http_method: POST
+    path: /internal/run-weekly
+    auth: token
+    token_env: WEEKLY_JOB_TOKEN
+    attempt_deadline: 600s
