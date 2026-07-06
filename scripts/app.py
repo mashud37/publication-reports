@@ -23,26 +23,36 @@ WEEKLY_JOB_TOKEN = os.environ["WEEKLY_JOB_TOKEN"]
 TEMPLATE = """<!DOCTYPE html>
 <html><head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Publications &mdash; {{ date }}</title>
 <style>
 * { box-sizing: border-box; }
 body { font-family: sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1.5rem; color: #111; }
 h1 { font-size: 1.4rem; margin-bottom: 0.2rem; }
 .subtitle { color: #6b7280; font-size: 0.9rem; margin-bottom: 1.5rem; }
-.article { padding: 1rem; margin: 0.6rem 0; border: 1px solid #e5e7eb; border-radius: 6px; display: flex; gap: 0.75rem; align-items: flex-start; }
-.article.checked { border-color: #2563eb; background: #eff6ff; }
-input[type=checkbox] { width: 18px; height: 18px; flex-shrink: 0; margin-top: 3px; cursor: pointer; }
-.body { flex: 1; min-width: 0; }
+.article {
+  display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: "checkbox body score";
+  gap: 0.75rem; align-items: start; padding: 1rem; margin: 0.6rem 0;
+  border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer;
+}
+.article:has(input:checked) { border-color: #2563eb; background: #eff6ff; }
+input[type=checkbox] { grid-area: checkbox; width: 18px; height: 18px; margin-top: 3px; cursor: pointer; }
+.body { grid-area: body; min-width: 0; overflow-wrap: break-word; }
 .title { font-weight: 600; font-size: 0.97rem; line-height: 1.4; }
 .meta { color: #6b7280; font-size: 0.8rem; margin-top: 0.2rem; }
 .meta a { color: #2563eb; }
 .abstract { color: #374151; font-size: 0.86rem; margin-top: 0.45rem; line-height: 1.5; }
-.score { color: #9ca3af; font-size: 0.75rem; white-space: nowrap; padding-top: 3px; }
-.bar { position: sticky; bottom: 0; background: white; border-top: 1px solid #e5e7eb; padding: 0.9rem 0; margin-top: 1rem; display: flex; align-items: center; gap: 1rem; }
+.score { grid-area: score; color: #9ca3af; font-size: 0.75rem; white-space: nowrap; padding-top: 3px; }
+.bar { position: sticky; bottom: 0; background: white; border-top: 1px solid #e5e7eb; padding: 0.9rem 0; margin-top: 1rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
 button { background: #2563eb; color: white; padding: 0.55rem 1.5rem; border: none; border-radius: 4px; font-size: 0.95rem; cursor: pointer; }
 button:hover { background: #1d4ed8; }
 .hint { color: #6b7280; font-size: 0.82rem; }
 .done-banner { background: #dcfce7; border: 1px solid #bbf7d0; padding: 0.7rem 1rem; border-radius: 4px; margin-bottom: 1rem; font-size: 0.9rem; }
+@media (max-width: 600px) {
+  body { margin: 1rem auto; padding: 0 1rem; }
+  .article { grid-template-columns: auto 1fr; grid-template-areas: "checkbox body" "score score"; padding: 0.85rem; }
+  .score { text-align: right; white-space: normal; }
+}
 </style>
 </head>
 <body>
@@ -59,7 +69,7 @@ button:hover { background: #1d4ed8; }
 <form method="post" action="/week/{{ date }}/select">
 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 {% for article, score in ranked %}
-<div class="article{% if article.id in selected_ids %} checked{% endif %}">
+<label class="article">
   <input type="checkbox" name="selected" value="{{ article.id }}"
     {% if article.id in selected_ids %}checked{% endif %}
     {% if done %}disabled{% endif %}>
@@ -70,7 +80,7 @@ button:hover { background: #1d4ed8; }
       {% if article.authors %} &nbsp;|&nbsp; {{ article.authors }}{% endif %}
     </div>
     <div class="meta">
-      <a href="https://doi.org/{{ article.doi }}" target="_blank">doi.org/{{ article.doi }}</a>
+      <a href="https://doi.org/{{ article.doi }}" target="_blank" onclick="event.stopPropagation()">doi.org/{{ article.doi }}</a>
     </div>
     {% if article.abstract %}
     <div class="abstract">
@@ -81,7 +91,7 @@ button:hover { background: #1d4ed8; }
   {% if score is not none %}
   <div class="score">{{ "%.0f"|format(score * 100) }}%</div>
   {% endif %}
-</div>
+</label>
 {% endfor %}
 {% if not done %}
 <div class="bar">

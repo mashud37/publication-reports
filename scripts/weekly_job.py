@@ -17,23 +17,35 @@ def week_dates():
 
 
 def run():
+    print("weekly job: starting")
+    print("  · 1/4  Init DB")
+    print("  · 2/4  Fetch articles from CrossRef")
+    print("  · 3/4  Rank articles")
+    print("  · 4/4  Send email")
+
+    print("weekly job [1/4] init DB")
     init_db()
 
     if os.path.exists(HISTORICAL_CSV):
+        print(f"weekly job: loading historical labels from {HISTORICAL_CSV}")
         load_historical(HISTORICAL_CSV)
 
     week_label, fetch_from, fetch_to = week_dates()
 
     if not get_week_articles(week_label):
-        print(f"Fetching {fetch_from} → {fetch_to}")
+        print(f"weekly job [2/4] fetching {fetch_from} → {fetch_to}")
         articles = fetch_articles(CSV_PATH, fetch_from, fetch_to)
         for a in articles:
             a["week_date"] = week_label
         save_articles(articles)
         print(f"Saved {len(articles)} articles")
+    else:
+        print(f"weekly job [2/4] using cached articles for {week_label}")
 
     articles = get_week_articles(week_label)
+    print(f"weekly job [3/4] ranking {len(articles)} articles")
     ranked = rank(articles)
+    print(f"weekly job [4/4] sending email for week {week_label}")
     send_weekly_email(week_label, ranked, access_token=os.environ["ACCESS_TOKEN"])
 
 

@@ -11,8 +11,11 @@ def fetch_articles(csv_path, filter_from, filter_to):
     attributes = "title,author,DOI,created,abstract"
 
     articles = []
-    for _, row in info_cr.iterrows():
+    journals = list(info_cr.iterrows())
+    total = len(journals)
+    for i, (_, row) in enumerate(journals, 1):
         issn = row["o-issn"]
+        print(f"[{i}/{total}] fetching {row['name']} ({issn})")
         url = (
             f"http://api.crossref.org/journals/{issn}/works"
             f"?select={attributes}&filter={filters}&rows=500"
