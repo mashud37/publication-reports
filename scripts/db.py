@@ -73,8 +73,15 @@ def save_articles(articles):
                 INSERT OR IGNORE INTO articles
                     (doi, title, authors, abstract, journal_name, journal_group, week_date)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (a["doi"], a["title"], a["authors"], a["abstract"],
-                  a["journal_name"], a["journal_group"], a["week_date"]))
+            """, (
+                a["doi"],
+                a["title"],
+                a["authors"],
+                a["abstract"],
+                a["journal_name"],
+                a["journal_group"],
+                a["week_date"],
+            ))
 
 
 def get_week_articles(week_date):

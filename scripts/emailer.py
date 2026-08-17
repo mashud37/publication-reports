@@ -1,3 +1,4 @@
+import copy
 import os
 import smtplib
 from email import encoders
@@ -6,25 +7,20 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 
-def _smtp_config():
-    return {
-        "host": os.environ["SMTP_HOST"],
-        "port": int(os.environ.get("SMTP_PORT", "587")),
-        "user": os.environ["SMTP_USER"],
-        "password": os.environ["SMTP_PASS"],
-        "to": os.environ["EMAIL_TO"],
-    }
-
-
 def _send(msg):
-    cfg = _smtp_config()
-    msg["From"] = cfg["user"]
-    msg["To"] = cfg["to"]
-    with smtplib.SMTP(cfg["host"], cfg["port"]) as server:
+    host = os.environ["SMTP_HOST"]
+    port = int(os.environ.get("SMTP_PORT", "587"))
+    user = os.environ["SMTP_USER"]
+    password = os.environ["SMTP_PASS"]
+
+    outgoing = copy.deepcopy(msg)
+    outgoing["From"] = user
+    outgoing["To"] = os.environ["EMAIL_TO"]
+    with smtplib.SMTP(host, port) as server:
         server.starttls()
-        server.login(cfg["user"], cfg["password"])
-        server.send_message(msg)
-    print(f"Email sent: {msg['Subject']}")
+        server.login(user, password)
+        server.send_message(outgoing)
+    print(f"Email sent: {outgoing['Subject']}")
 
 
 def send_weekly_email(week_date, ranked, access_token):
@@ -42,10 +38,10 @@ def send_weekly_email(week_date, ranked, access_token):
     ranked_note = (
         "Ranked by predicted relevance."
         if is_ranked
-        else "Not yet ranked — make selections each week to train the model."
+        else "Not yet ranked, make selections each week to train the model."
     )
 
-    body = f"""Publications — Week of {week_date}
+    body = f"""Publications: Week of {week_date}
 {total} new publications
 
 {group_lines}
@@ -55,7 +51,7 @@ def send_weekly_email(week_date, ranked, access_token):
 {url}"""
 
     msg = MIMEText(body, "plain")
-    msg["Subject"] = f"Publications — Week of {week_date} ({total} new)"
+    msg["Subject"] = f"Publications: Week of {week_date} ({total} new)"
     _send(msg)
 
 
@@ -75,7 +71,7 @@ def _ris_record(article):
 
 
 def _markdown_report(week_date, articles):
-    lines = [f"# Selected Publications — Week of {week_date}\n"]
+    lines = [f"# Selected Publications: Week of {week_date}\n"]
     current_group = None
     for a in sorted(articles, key=lambda x: x["journal_group"]):
         if a["journal_group"] != current_group:
@@ -108,17 +104,20 @@ def send_selection_email(week_date, articles):
             article_lines.append(f"https://doi.org/{a['doi']}")
         article_lines.append("")
 
-    body = f"""Your selections — Week of {week_date}
-{len(articles)} article{'s' if len(articles) != 1 else ''} selected
+    article_block = "\n".join(article_lines)
+    plural = "s" if len(articles) != 1 else ""
 
-{"".join(l + chr(10) for l in article_lines)}
+    body = f"""Your selections - Week of {week_date}
+{len(articles)} article{plural} selected
+
+{article_block}
 DOIs:
 {doi_list}
 
 Attachments: .md readable list, .ris Zotero import, -dois.txt plain DOI list"""
 
     msg = MIMEMultipart("mixed")
-    msg["Subject"] = f"Your selections — Week of {week_date} ({len(articles)} articles)"
+    msg["Subject"] = f"Your selections: Week of {week_date} ({len(articles)} articles)"
     msg.attach(MIMEText(body, "plain"))
 
     for filename, content, mimetype in [

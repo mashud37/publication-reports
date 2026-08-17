@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# deploy.sh — full one-shot deployment for publication-reports
+# deploy.sh: full one-shot deployment for publication-reports
 # Usage: edit the variables below, then: bash deploy.sh
 #
 # NOTE: gcloud_app.yaml is the authoritative config (see ../GCLOUD_POLICY.md and
-#       ../manage.py). This script is the standalone fallback — keep it in sync.
+#       ../manage.py). This script is the standalone fallback, keep it in sync.
 #
 # First-time flow:
 #   1. Set PROJECT, REGION, and email vars, leave WEEKLY_JOB_TOKEN empty.
-#   2. Run: bash deploy.sh  — this builds and deploys the service.
+#   2. Run: bash deploy.sh, this builds and deploys the service.
 #   3. Copy the printed SERVICE_URL into env.yaml as BASE_URL.
 #   4. Set WEEKLY_JOB_TOKEN to the value from env.yaml.
-#   5. Run: bash deploy.sh  — redeploys with BASE_URL and creates the scheduler.
+#   5. Run: bash deploy.sh, redeploys with BASE_URL and creates the scheduler.
 
 set -euo pipefail
 
@@ -50,7 +50,7 @@ gcloud storage buckets update "gs://${BUCKET}" \
 
 # ── service account for Cloud Scheduler ──────────────────────────────────────
 gcloud iam service-accounts create pubrep-sa \
-  --display-name="Pub Reports — Cloud Scheduler invoker" \
+  --display-name="Pub Reports, Cloud Scheduler invoker" \
   --project="${PROJECT}" 2>/dev/null || true
 
 gcloud projects add-iam-policy-binding "${PROJECT}" \
@@ -107,7 +107,7 @@ if [ -n "${WEEKLY_JOB_TOKEN}" ]; then
     --project="${PROJECT}"
   echo "Scheduler job pubrep-weekly-sched created/updated."
 else
-  echo "WEEKLY_JOB_TOKEN not set — skipping scheduler setup."
+  echo "WEEKLY_JOB_TOKEN not set, skipping scheduler setup."
   echo "Set it at the top of this script and re-run to create the scheduler job."
 fi
 

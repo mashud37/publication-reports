@@ -13,7 +13,11 @@ def week_dates():
     today = datetime.now()
     monday = today - timedelta(days=today.weekday())
     last_monday = monday - timedelta(days=7)
-    return monday.strftime("%Y-%m-%d"), last_monday.strftime("%Y-%m-%d"), monday.strftime("%Y-%m-%d")
+    return {
+        "week_label": monday.strftime("%Y-%m-%d"),
+        "fetch_from": last_monday.strftime("%Y-%m-%d"),
+        "fetch_to": monday.strftime("%Y-%m-%d"),
+    }
 
 
 def run():
@@ -30,7 +34,8 @@ def run():
         print(f"weekly job: loading historical labels from {HISTORICAL_CSV}")
         load_historical(HISTORICAL_CSV)
 
-    week_label, fetch_from, fetch_to = week_dates()
+    dates = week_dates()
+    week_label, fetch_from, fetch_to = dates["week_label"], dates["fetch_from"], dates["fetch_to"]
 
     if not get_week_articles(week_label):
         print(f"weekly job [2/4] fetching {fetch_from} → {fetch_to}")

@@ -11,7 +11,7 @@ __pycache__/
 *.swp
 .DS_Store
 
-# Secrets — never commit. Production secrets live in env.yaml mounted at
+# Secrets, never commit. Production secrets live in env.yaml mounted at
 # deploy time; env.yaml.example is the committed template.
 .env
 env.yaml

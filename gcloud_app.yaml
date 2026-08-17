@@ -1,4 +1,4 @@
-# Standardized deployment manifest — see ../GCLOUD_POLICY.md
+# Standardized deployment manifest, see ../GCLOUD_POLICY.md
 # Source of truth for `python ../manage.py`. deploy.sh is the standalone fallback.
 app: pub-reports
 prefix: pubrep
@@ -11,7 +11,7 @@ artifact_registry:
 
 service_account:
   name: pubrep-sa
-  display: "Pub Reports — Cloud Scheduler invoker"
+  display: "Pub Reports, Cloud Scheduler invoker"
   roles: [roles/run.invoker]
 
 buckets:
