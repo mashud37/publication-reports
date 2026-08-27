@@ -134,3 +134,12 @@ def get_training_data():
         return [dict(r) for r in conn.execute(
             "SELECT title, abstract, selected FROM training"
         ).fetchall()]
+
+
+def update_abstracts(updates):
+    with _conn() as conn:
+        for update in updates:
+            conn.execute("""
+                UPDATE articles SET abstract = ?
+                WHERE doi = ? AND (abstract IS NULL OR TRIM(abstract) = '')
+            """, (update["abstract"], update["doi"]))

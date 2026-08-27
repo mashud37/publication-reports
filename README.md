@@ -1,6 +1,6 @@
 # publication-reports
 
-The goal of publication-reports is to more easily track new articles across a personal list of journals. Each Monday the job fetches new publications from a configured journal list, emails a short notification with a link, and shows a web page where the reader ticks the articles worth reading. A follow-up email delivers those selections as a readable list plus Zotero import files, and the selections themselves become training data. A TF-IDF and logistic regression model, seeded from a set of pre-labelled articles and retrained on every run, reorders future weeks so the most relevant articles surface first, using the same active-learning logic as systematic-review tools like ASReview.
+The goal of publication-reports is to more easily track new articles across a personal list of journals. Each Monday the job fetches new publications from a configured journal list, fills in abstracts from OpenAlex for the many journals that deposit none with CrossRef, emails a short notification with a link, and shows a web page where the reader ticks the articles worth reading. A follow-up email delivers those selections as a readable list plus Zotero import files, and the selections themselves become training data. A TF-IDF and logistic regression model, seeded from a set of pre-labelled articles and retrained on every run, reorders future weeks so the most relevant articles surface first, using the same active-learning logic as systematic-review tools like ASReview.
 
 ## Data flow
 
@@ -8,7 +8,8 @@ The goal of publication-reports is to more easily track new articles across a pe
 flowchart TD
     SCHED[/"Cloud Scheduler<br/>Mon 08:00 Berlin"/] -->|"POST /internal/run-weekly<br/>?token=WEEKLY_JOB_TOKEN"| RUN["weekly_job.run()"]
     RUN --> FETCH["Fetch new articles<br/>(CrossRef, by ISSN)"]
-    FETCH --> DB[("publications.db<br/>GCS-mounted /mnt/data")]
+    FETCH --> OA["Fill missing abstracts<br/>(OpenAlex, by DOI)"]
+    OA --> DB[("publications.db<br/>GCS-mounted /mnt/data")]
     RUN --> NOTIFY[/"Notification email<br/>(SMTP)"/]
 
     NOTIFY -->|"user clicks link"| WEEK["GET /week/&lt;date&gt;<br/>?token=ACCESS_TOKEN"]
@@ -32,6 +33,7 @@ flowchart TD
 scripts/app.py              Flask app: selection page, weekly job trigger route
 scripts/weekly_job.py       fetches new publications, sends the notification email
 scripts/grabber.py          CrossRef fetch logic
+scripts/openalex.py         fills abstracts CrossRef left empty, by DOI
 scripts/ranker.py           TF-IDF + logistic regression ranking model
 scripts/db.py               SQLite schema and data access
 scripts/emailer.py          notification and selection emails
@@ -62,6 +64,8 @@ bash deploy.sh
 ```
 
 `deploy.sh` prints the service URL and, once `WEEKLY_JOB_TOKEN` is set at the top of the script, creates the Cloud Scheduler trigger on the second run.
+
+OpenAlex needs no account and the job works with both OpenAlex keys left blank. Setting `OPENALEX_MAILTO` to a contact address moves requests onto the faster, more reliable polite pool and is worth doing; `OPENALEX_API_KEY` is only for a paid premium plan.
 
 Verify with:
 
@@ -94,6 +98,18 @@ gcloud scheduler jobs run pubrep-weekly-sched --location=europe-west1
 - Selection page or job trigger returns an error: tail the logs while retriggering to see the traceback.
 - Monday email never arrives: run the scheduler job manually and watch the logs; the most common cause is an incorrect `SMTP_PASS` (must be the 16-character App Password, no spaces) or a non-Gmail `SMTP_USER`.
 - Everything needs a clean restart: delete the service, scheduler job, and bucket with the commands above, then redo Setup from the bucket-creation step.
+
+## Abstract enrichment
+
+Many journals deposit no abstract with CrossRef, so a large share of each week's articles arrive as a bare title. Abstracts matter twice over here: they are what makes an entry judgeable on the selection page, and they are half the text the ranking model trains on, so an empty abstract weakens every future week's ordering.
+
+After the CrossRef fetch, articles with an empty abstract and a DOI are looked up against OpenAlex in batches of 50. Matching is by DOI alone, so there is no risk of attaching the wrong article's text. OpenAlex serves abstracts as an inverted index (word to positions) rather than as text, and `openalex.py` reassembles the words in position order.
+
+Not everything OpenAlex returns in that field is an abstract. Metadata dumps that begin `Article title:`, data-availability and conflict-of-interest statements, and fragments under twenty words are discarded rather than stored, because feeding them to the ranker is worse than leaving the abstract empty.
+
+Recovery is limited by what genuinely has an abstract to find. Book reviews, editorials, corrections, and cover matter have none and are simply left empty, and some publishers restrict abstract redistribution.
+
+> If OpenAlex is unreachable or returns an error, the affected batch is counted as failed and the weekly job carries on to ranking and email. A missing abstract never blocks the Monday notification.
 
 ## Cost
 

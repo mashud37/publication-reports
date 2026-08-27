@@ -1,7 +1,8 @@
 import os
 from datetime import datetime, timedelta
-from db import init_db, load_historical, save_articles, get_week_articles
+from db import init_db, load_historical, save_articles, get_week_articles, update_abstracts
 from grabber import fetch_articles
+from openalex import fill_missing_abstracts
 from ranker import rank
 from emailer import send_weekly_email
 
@@ -22,12 +23,13 @@ def week_dates():
 
 def run():
     print("weekly job: starting")
-    print("  · 1/4  Init DB")
-    print("  · 2/4  Fetch articles from CrossRef")
-    print("  · 3/4  Rank articles")
-    print("  · 4/4  Send email")
+    print("  · 1/5  Init DB")
+    print("  · 2/5  Fetch articles from CrossRef")
+    print("  · 3/5  Fill missing abstracts from OpenAlex")
+    print("  · 4/5  Rank articles")
+    print("  · 5/5  Send email")
 
-    print("weekly job [1/4] init DB")
+    print("weekly job [1/5] init DB")
     init_db()
 
     if os.path.exists(HISTORICAL_CSV):
@@ -38,19 +40,26 @@ def run():
     week_label, fetch_from, fetch_to = dates["week_label"], dates["fetch_from"], dates["fetch_to"]
 
     if not get_week_articles(week_label):
-        print(f"weekly job [2/4] fetching {fetch_from} → {fetch_to}")
+        print(f"weekly job [2/5] fetching {fetch_from} → {fetch_to}")
         articles = fetch_articles(CSV_PATH, fetch_from, fetch_to)
         for a in articles:
             a["week_date"] = week_label
         save_articles(articles)
         print(f"Saved {len(articles)} articles")
     else:
-        print(f"weekly job [2/4] using cached articles for {week_label}")
+        print(f"weekly job [2/5] using cached articles for {week_label}")
 
     articles = get_week_articles(week_label)
-    print(f"weekly job [3/4] ranking {len(articles)} articles")
+
+    print(f"weekly job [3/5] filling missing abstracts for {week_label}")
+    filled = fill_missing_abstracts(articles)
+    if filled["updates"]:
+        update_abstracts(filled["updates"])
+
+    articles = get_week_articles(week_label)
+    print(f"weekly job [4/5] ranking {len(articles)} articles")
     ranked = rank(articles)
-    print(f"weekly job [4/4] sending email for week {week_label}")
+    print(f"weekly job [5/5] sending email for week {week_label}")
     send_weekly_email(week_label, ranked, access_token=os.environ["ACCESS_TOKEN"])
 
 
