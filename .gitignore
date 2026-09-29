@@ -25,3 +25,4 @@ data/
 # Jupyter (occasional local exploration)
 *.ipynb
 .ipynb_checkpoints/
+.claude/
