@@ -37,7 +37,7 @@ scripts/openalex.py         fills abstracts CrossRef left empty, by DOI
 scripts/ranker.py           TF-IDF + logistic regression ranking model
 scripts/db.py               SQLite schema and data access
 scripts/emailer.py          notification and selection emails
-info/journal-info-comb.csv  the journal list (group, name, ISSN, include flag)
+info/journal-info-example.csv  template journal list (group, name, ISSN, include flag)
 model/data/                 pre-labelled seed articles for the ranker
 Dockerfile                  gunicorn image
 deploy.sh                   one-shot standalone deploy script
@@ -89,7 +89,7 @@ gcloud scheduler jobs run pubrep-weekly-sched --location=europe-west1
 
 **Redeploy after a code or settings change** runs `bash deploy.sh` again; Cloud Run replaces the running revision in place with no separate stop step.
 
-**Adding or removing journals.** Edit `info/journal-info-comb.csv` in a spreadsheet application: `group` is the section heading, `name` the display name, `o-issn` the ISSN CrossRef is queried against, and `crossref` set to `T` to include the row in the weekly fetch. Redeploy after editing so the new image ships the updated file.
+**Adding or removing journals.** Copy `info/journal-info-example.csv` to `info/journal-info-comb.csv` (gitignored, the file the job reads) and edit the copy in a spreadsheet application: `group` is the section heading, `name` the display name, `o-issn` the ISSN CrossRef is queried against, and `crossref` set to `T` to include the row in the weekly fetch. Redeploy after editing so the new image ships the updated file.
 
 **Inspecting the database.** Download it with the command above and open it in DB Browser for SQLite; it holds articles, selection history, and the training data the ranker retrains on.
 

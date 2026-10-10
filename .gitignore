@@ -18,6 +18,9 @@ env.yaml
 *.token.json
 credentials.json
 
+# Personal journal list; info/journal-info-example.csv is the committed template.
+info/journal-info-comb.csv
+
 # Local database (publications.db lives on GCS in production).
 data/
 *.db
